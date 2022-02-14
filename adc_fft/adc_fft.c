@@ -67,13 +67,62 @@ int main() {
     for (int i = 0; i < NSAMP/2; i++) {
       float power = fft_out[i].r*fft_out[i].r+fft_out[i].i*fft_out[i].i;
       if (power>max_power) {
-	max_power=power;
-	max_idx = i;
+	      max_power=power;
+	      max_idx = i;
       }
     }
 
     float max_freq = freqs[max_idx];
-    printf("Greatest Frequency Component: %0.1f Hz %0.1f\n",max_freq,max_power);
+    float left_freq = freqs[max_idx-1];
+    float right_freq = freqs[max_idx+1];
+    float left_power = fft_out[max_idx-1].r*fft_out[max_idx-1].r+fft_out[max_idx-1].i*fft_out[max_idx-1].i;
+    float right_power = fft_out[max_idx+1].r*fft_out[max_idx+1].r+fft_out[max_idx+1].i*fft_out[max_idx+1].i;
+    float proportionR = max_power / right_power;
+    float proportionL = max_power / left_power;
+
+    float rightP = proportionR - (10 - (2.0 / (proportionR + 2.0)));
+    float rightMult = (-1.0 / (rightP + 1.0)) + 8.5;
+    float rightAdd = (4.0 / (rightP + 1.0)) + 24.0;
+
+    if (rightP < 1)
+    {
+      rightP = 1;
+    }
+    
+
+    float leftLean = rightAdd - (rightMult * log10(rightP));
+
+    if (leftLean < 0)
+    {
+        leftLean = 0;
+    }
+    else if (leftLean > 25)
+    {
+        leftLean = 25;
+    }
+
+    float numR = 3330 * log10(proportionL + 520) - 8750;
+    float rightLean = (numR/((proportionL+4)));
+    float actual_freq = max_freq;
+
+    if (leftLean < 0)
+    {
+      leftLean = 0;
+    }
+
+    if (left_power < right_power)
+    {
+      actual_freq = max_freq + rightLean;
+    }
+
+    if (left_power > right_power)
+    {
+      actual_freq = max_freq - leftLean;
+    }
+
+    printf("L: %0.1f Hz G: %0.1f Hz R: %0.1f Hz A: %0.1f\n",left_freq, max_freq, right_freq, actual_freq);
+    printf("L: %0.9f V G: %0.9f V R: %0.9f V\n",left_power, max_power, right_power);
+    
     
     if (max_freq > 2500.0 && max_freq <= 5000.0)
     {
